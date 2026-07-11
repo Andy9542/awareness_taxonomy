@@ -217,6 +217,7 @@ function render(){
  document.getElementById('btn-labels').textContent=u.labels[labelsOn?1:0];
  document.getElementById('btn-labels').setAttribute('aria-pressed',String(labelsOn));
  document.getElementById('btn-inv').textContent=`${u.inv}: ${inversions.length}`;
+ document.getElementById('btn-inv').setAttribute('aria-pressed',String(inversionActive));
  const hint=document.getElementById('hint');if(hint)hint.textContent=u.hint;
  document.getElementById('foot-l').textContent=u.foot;
  document.body.classList.toggle('labels-on',labelsOn);
@@ -247,6 +248,7 @@ function showPanel(n){
 }
 const adj={}; [...DATA.skel,...DATA.cross].forEach(l=>{(adj[l.s]=adj[l.s]||new Set()).add(l.t);(adj[l.t]=adj[l.t]||new Set()).add(l.s);});
 let selectedId=null;
+let inversionActive=false;
 const canHover=()=>matchMedia('(hover:hover) and (pointer:fine)').matches;
 const isCompact=()=>matchMedia('(max-width:900px)').matches;
 function highlight(id){
@@ -255,22 +257,28 @@ function highlight(id){
 }
 function clearHighlight(){nodes.classed('dimmed',false);d3.selectAll('.link').classed('dimmed',false);}
 function resetPanel(){
- selectedId=null;clearHighlight();
+ selectedId=null;inversionActive=false;clearHighlight();
+ document.getElementById('btn-inv').setAttribute('aria-pressed','false');
  document.getElementById('panel-content').innerHTML=`<p class="hint" id="hint">${UI[lang].hint}</p>`;
  document.getElementById('panel').classList.remove('open');
  document.getElementById('panel').setAttribute('aria-hidden',String(isCompact()));
 }
-function selectNode(n){selectedId=n.id;showPanel(n);highlight(n.id);}
+function selectNode(n,{inversion=false}={}){
+ selectedId=n.id;inversionActive=inversion;
+ document.getElementById('btn-inv').setAttribute('aria-pressed',String(inversion));
+ showPanel(n);highlight(n.id);
+}
 nodes.on('mouseenter',(e,n)=>{if(!canHover()||selectedId)return;showPanel(n);highlight(n.id);})
  .on('mouseleave',()=>{if(!canHover()||selectedId)return;clearHighlight();})
  .on('click',(e,n)=>{e.stopPropagation();selectNode(n);})
  .on('keydown',(e,n)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectNode(n);}});
-svg.on('click',()=>{if(isCompact()&&selectedId)resetPanel();});
+svg.on('click',()=>{if(selectedId)resetPanel();});
 document.getElementById('btn-labels').onclick=()=>{labelsOn=!labelsOn;render();};
 document.getElementById('btn-inv').onclick=()=>{
  if(!inversions.length)return;
+ if(inversionActive){resetPanel();fitMap();return;}
  invIdx=(invIdx+1)%inversions.length;const l=inversions[invIdx];
- const[x1,y1]=POS[l.s],[x2,y2]=POS[l.t];selectNode(byId[l.t]);
+ const[x1,y1]=POS[l.s],[x2,y2]=POS[l.t];selectNode(byId[l.t],{inversion:true});
  const u=UI[lang],d=byId[l.s].year-byId[l.t].year;
  const content=document.getElementById('panel-content');
  content.innerHTML=`<div style="color:var(--red);margin-bottom:12px">${u.invNote}${d}${u.years}</div>`+content.innerHTML;
